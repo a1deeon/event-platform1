@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Список мероприятий</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+            color: #333;
+        }
+        h1 {
+            color: #1a3c34;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .add-new {
+            display: inline-block;
+            margin-bottom: 20px;
+            padding: 10px 20px;
+            background-color: #1a3c34;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+        .add-new:hover {
+            background-color: #14524b;
+        }
+        .filter-form {
+            background-color: #ffffff;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-form label {
+            font-weight: bold;
+            color: #1a3c34;
+        }
+        .filter-form input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        .filter-form input:focus {
+            border-color: #1a3c34;
+            outline: none;
+        }
+        .filter-form button {
+            padding: 8px 15px;
+            background-color: #1a3c34;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        .filter-form button:hover {
+            background-color: #14524b;
+        }
+        .filter-form .reset-button {
+            background-color: #ff4444;
+        }
+        .filter-form .reset-button:hover {
+            background-color: #cc0000;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background-color: #ffffff;
+            margin: 15px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        li:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+        }
+        li.past {
+            background-color: #f0f0f0;
+            border-left: 5px solid #999;
+        }
+        li.upcoming {
+            background-color: #e6f4ea;
+            border-left: 5px solid #1a3c34;
+        }
+        .event-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1a3c34;
+            margin-bottom: 5px;
+        }
+        .event-status {
+            font-size: 0.9em;
+            font-style: italic;
+            margin-bottom: 5px;
+        }
+        .event-status.past {
+            color: #999;
+        }
+        .event-status.upcoming {
+            color: #1a3c34;
+        }
+        .event-description {
+            color: #555;
+            margin: 5px 0;
+        }
+        .event-details {
+            color: #777;
+            font-size: 0.95em;
+        }
+        .event-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        .event-actions a {
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+        .edit-link {
+            background-color: #1a3c34;
+            color: white;
+        }
+        .edit-link:hover {
+            background-color: #14524b;
+        }
+        .delete-link {
+            background-color: #ff4444;
+            color: white;
+        }
+        .delete-link:hover {
+            background-color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Список мероприятий</h1>
+    <a th:href="@{/events/new}" class="add-new">Добавить новое</a>
+
+    <div class="filter-form">
+        <form th:action="@{/events}" method="get">
+            <label>Дата:</label>
+            <input type="date" name="date" th:value="${filterDate}" />
+
+            <label>Локация:</label>
+            <input type="text" name="location" th:value="${filterLocation}" placeholder="Введите локацию" />
+
+            <button type="submit">Фильтровать</button>
+            <button type="button" class="reset-button" onclick="window.location.href='/events'">Сбросить</button>
+        </form>
+    </div>
+
+    <ul>
+        <li th:each="eventWithStatus : ${eventsWithStatus}" th:class="${eventWithStatus.status}">
+            <div class="event-title" th:text="${eventWithStatus.event.title}">Заголовок</div>
+            <div class="event-status" th:class="${eventWithStatus.status}"
+                 th:text="${eventWithStatus.status == 'past'} ? 'Прошедшее' : 'Предстоящее'"></div>
+            <div class="event-description" th:if="${eventWithStatus.event.description}"
+                 th:text="${eventWithStatus.event.description}">Описание</div>
+            <div class="event-details">
+                <span th:text="${#temporals.format(eventWithStatus.event.date, 'dd.MM.yyyy')}">Дата</span>,
+                <span th:text="${eventWithStatus.event.location}">Локация</span>
+            </div>
+            <div class="event-actions">
+                <a th:href="@{/events/edit/{id}(id=${eventWithStatus.event.id})}" class="edit-link">Редактировать</a>
+                <a th:href="@{/events/delete/{id}(id=${eventWithStatus.event.id})}" class="delete-link"
+                   onclick="return confirm('Вы уверены, что хотите удалить это мероприятие?')">Удалить</a>
+            </div>
+        </li>
+    </ul>
+</div>
+</body>
+</html>
