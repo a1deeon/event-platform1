@@ -1,13 +1,14 @@
 <!DOCTYPE html>
-<html lang="ru" xmlns:th="http://www.thymeleaf.org">
+<html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="UTF-8">
-    <title>Список мероприятий</title>
+    <title>Мероприятия</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding: 20px;
+            padding: 0;
             background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
             color: #333;
         }
@@ -16,184 +17,727 @@
             text-align: center;
             font-size: 2.5em;
             margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
         }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
+        .main-container {
+            max-width: 1400px; /* Увеличена максимальная ширина контейнера */
+            margin: 20px auto;
+            padding: 0 30px; /* Увеличен padding по бокам */
         }
-        .add-new {
-            display: inline-block;
-            margin-bottom: 20px;
-            padding: 10px 20px;
-            background-color: #1a3c34;
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            transition: background-color 0.3s ease;
-        }
-        .add-new:hover {
-            background-color: #14524b;
-        }
-        .filter-form {
-            background-color: #ffffff;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        .section {
             margin-bottom: 30px;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        /* Общий h2 стиль */
+        h2 {
+            color: #1a3c34;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* Навигация */
+        .navbar {
+            background-color: #1a3c34;
+            padding: 10px 50px; /* Увеличен padding по горизонтали */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            color: white;
+            font-size: 1.8em;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .navbar-links {
             display: flex;
             align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap; /* Предотвращает перенос, пока есть место */
         }
-        .filter-form label {
+        .navbar-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 30px; /* Увеличен отступ между ссылками */
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+        .navbar-links a:hover {
+            color: #b2ebf2;
+        }
+        .navbar-links form {
+            display: inline-block;
+            margin-left: 30px;
+        }
+        .navbar-links button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .navbar-links button:hover {
+            color: #b2ebf2;
+        }
+
+        /* Кнопка "Найти мероприятие" в навбаре */
+        .search-toggle-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            margin-left: 20px;
+            white-space: nowrap; /* Чтобы кнопка не переносилась */
+        }
+        .search-toggle-btn:hover {
+            background-color: #0056b3;
+        }
+
+        /* Контейнер для формы поиска */
+        .search-form-container {
+            max-width: 1400px; /* Соответствует main-container */
+            margin: 0 auto 30px auto;
+            padding: 0 30px; /* Соответствует main-container */
+            overflow: hidden;
+            transition: max-height 0.5s ease-out, opacity 0.5s ease-out;
+            max-height: 0;
+            opacity: 0;
+            box-sizing: border-box;
+        }
+        .search-form-container.active {
+            max-height: 200px;
+            opacity: 1;
+            padding-bottom: 20px;
+        }
+        .search-form {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: flex-end;
+            box-sizing: border-box;
+            flex-direction: column; /* Изменено: для выравнивания заголовка */
+            align-items: center; /* Изменено: для центрирования содержимого формы */
+        }
+        /* Новый стиль для заголовка H2 внутри формы поиска */
+        .search-form h2 {
+            margin-top: 0;
+            margin-bottom: 20px; /* Увеличим отступ снизу */
+            text-align: center; /* Центрируем заголовок */
+            width: 100%; /* Заголовок занимает всю ширину */
+        }
+        .search-form form { /* Добавлено: стили для самой формы внутри search-form */
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            width: 100%; /* Чтобы форма занимала всю ширину */
+        }
+        .search-form .form-group {
+            flex: 1;
+            min-width: 250px; /* Немного увеличена минимальная ширина полей поиска */
+            box-sizing: border-box;
+        }
+        .search-form label {
+            display: block;
+            margin-bottom: 5px;
             font-weight: bold;
             color: #1a3c34;
         }
-        .filter-form input {
-            padding: 8px;
-            border: 1px solid #ddd;
+        .search-form input[type="text"],
+        .search-form input[type="date"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ced4da;
             border-radius: 5px;
-            font-size: 14px;
-            transition: border-color 0.3s ease;
+            box-sizing: border-box;
         }
-        .filter-form input:focus {
-            border-color: #1a3c34;
-            outline: none;
-        }
-        .filter-form button {
-            padding: 8px 15px;
-            background-color: #1a3c34;
+        .search-form button[type="submit"] {
+            padding: 10px 20px;
+            background-color: #007bff;
             color: white;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 1em;
             transition: background-color 0.3s ease;
         }
-        .filter-form button:hover {
-            background-color: #14524b;
+        .search-form button[type="submit"]:hover {
+            background-color: #0056b3;
         }
-        .filter-form .reset-button {
-            background-color: #ff4444;
-        }
-        .filter-form .reset-button:hover {
-            background-color: #cc0000;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
+
+        /* Стили для карусели популярных мероприятий */
+        .carousel-section {
+            overflow: hidden;
+            position: relative;
+            margin-bottom: 30px;
+            padding: 20px 0;
             background-color: #ffffff;
-            margin: 15px 0;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         }
-        li:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
-        }
-        li.past {
-            background-color: #f0f0f0;
-            border-left: 5px solid #999;
-        }
-        li.upcoming {
-            background-color: #e6f4ea;
-            border-left: 5px solid #1a3c34;
-        }
-        .event-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #1a3c34;
-            margin-bottom: 5px;
-        }
-        .event-status {
-            font-size: 0.9em;
-            font-style: italic;
-            margin-bottom: 5px;
-        }
-        .event-status.past {
-            color: #999;
-        }
-        .event-status.upcoming {
-            color: #1a3c34;
-        }
-        .event-description {
-            color: #555;
-            margin: 5px 0;
-        }
-        .event-details {
-            color: #777;
-            font-size: 0.95em;
-        }
-        .event-actions {
-            margin-top: 10px;
+        .carousel-container {
             display: flex;
-            gap: 10px;
+            transition: transform 0.5s ease-in-out;
+            padding: 0 20px; /* Отступы внутри контейнера карусели */
         }
-        .event-actions a {
+        .carousel-item {
+            flex: 0 0 320px; /* Немного увеличена ширина карточки карусели */
+            margin-right: 30px; /* Увеличен отступ между карточками */
+            background-color: #fefefe;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        .carousel-item:last-child {
+            margin-right: 0;
+        }
+        .carousel-item:hover {
+            transform: translateY(-5px);
+        }
+        .carousel-item img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+        .carousel-item-content {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .carousel-item h3 {
+            font-size: 1.3em;
+            color: #1a3c34;
+            margin-top: 0;
+            margin-bottom: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .carousel-item p {
+            font-size: 1em;
+            color: #666;
+            line-height: 1.4;
+            flex-grow: 1;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            margin-bottom: 10px;
+        }
+        .carousel-item .details-btn {
+            display: inline-block;
+            padding: 10px 18px;
+            background-color: #007bff;
+            color: white;
             text-decoration: none;
-            padding: 5px 10px;
             border-radius: 5px;
-            font-size: 14px;
+            font-size: 1em;
             transition: background-color 0.3s ease;
+            text-align: center;
         }
-        .edit-link {
-            background-color: #1a3c34;
+        .carousel-item .details-btn:hover {
+            background-color: #0056b3;
+        }
+        .carousel-buttons {
+            position: absolute;
+            top: 50%;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            transform: translateY(-50%);
+            padding: 0 10px;
+            pointer-events: none;
+        }
+        .carousel-btn {
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.5em;
+            z-index: 10;
+            pointer-events: all;
+            transition: background-color 0.3s ease;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .carousel-btn:hover {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+        .carousel-btn:disabled {
+            background-color: rgba(0, 0, 0, 0.2);
+            cursor: not-allowed;
+        }
+
+        /* Стили для основной сетки мероприятий */
+        .event-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Увеличена минимальная ширина карточки */
+            gap: 30px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .event-card {
+            background-color: #fefefe;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            transition: transform 0.3s ease;
+        }
+        .event-card:hover {
+            transform: translateY(-5px);
+        }
+        .event-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+        .event-card-content {
+            padding: 15px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .event-card h3 {
+            font-size: 1.4em;
+            color: #1a3c34;
+            margin-top: 0;
+            margin-bottom: 10px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .event-card p {
+            font-size: 1.05em;
+            color: #666;
+            line-height: 1.5;
+            flex-grow: 1;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            margin-bottom: 10px;
+        }
+        .event-card .info-item {
+            display: flex;
+            align-items: center;
+            font-size: 1em;
+            color: #444;
+            margin-bottom: 8px;
+        }
+        .event-card .info-item i {
+            margin-right: 8px;
+            color: #1a3c34;
+            font-size: 1.1em;
+        }
+        .event-card .details-btn {
+            display: inline-block;
+            padding: 10px 18px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            text-align: center;
+            margin-top: 15px;
+        }
+        .event-card .details-btn:hover {
+            background-color: #0056b3;
+        }
+        .no-events {
+            text-align: center;
+            color: #777;
+            font-size: 1.2em;
+            padding: 30px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .filter-buttons {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .filter-buttons a {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 0 5px;
+            background-color: #e9ecef;
+            color: #495057;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            font-weight: bold;
+        }
+        .filter-buttons a.active,
+        .filter-buttons a:hover {
+            background-color: #007bff;
             color: white;
         }
-        .edit-link:hover {
-            background-color: #14524b;
+
+        /* Адаптивность */
+        @media (max-width: 1200px) { /* Дополнительный медиа-запрос для ноутбуков */
+            .main-container {
+                max-width: 1000px; /* Уменьшаем максимальную ширину */
+                padding: 0 20px;
+            }
+            .navbar {
+                padding: 10px 30px;
+            }
+            .navbar-links a, .navbar-links form {
+                margin-left: 20px;
+            }
+            .carousel-item {
+                flex: 0 0 300px;
+                margin-right: 25px;
+            }
+            .event-grid {
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            }
         }
-        .delete-link {
-            background-color: #ff4444;
-            color: white;
+        @media (max-width: 992px) {
+            .main-container {
+                max-width: 90%; /* Адаптивная ширина */
+                padding: 0 15px;
+            }
+            .carousel-item {
+                flex: 0 0 280px;
+                margin-right: 20px;
+            }
+            .event-grid {
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+            }
+            .navbar {
+                padding: 10px 20px;
+            }
+            .navbar-links {
+                flex-wrap: wrap; /* Разрешаем перенос на меньших экранах */
+                justify-content: center;
+            }
+            .navbar-links a, .navbar-links button, .navbar-links form {
+                margin: 5px 10px; /* Отступы для перенесенных элементов */
+            }
+            .search-toggle-btn {
+                margin-left: 10px; /* Корректировка отступа */
+            }
         }
-        .delete-link:hover {
-            background-color: #cc0000;
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            .main-container {
+                padding: 0 10px;
+                margin: 10px auto;
+            }
+            h1 {
+                font-size: 2em;
+            }
+            .navbar {
+                flex-direction: column;
+                padding: 10px 15px;
+                align-items: flex-start; /* Выравниваем по левому краю при колонке */
+            }
+            .navbar-links {
+                margin-top: 15px;
+                flex-direction: column; /* Ссылки в колонку */
+                align-items: flex-start; /* Выравниваем по левому краю */
+                width: 100%;
+            }
+            .navbar-links a, .navbar-links button, .navbar-links form {
+                margin: 5px 0; /* Убираем горизонтальные отступы, оставляем вертикальные */
+                width: auto; /* Позволяем им сжиматься */
+            }
+            .search-toggle-btn {
+                margin-left: 0; /* Убираем отступ, если кнопка в своей строке */
+                margin-top: 10px;
+                width: 100%; /* Растягиваем кнопку на всю ширину */
+            }
+            .search-form-container.active {
+                max-height: 300px;
+            }
+            .search-form {
+                flex-direction: column;
+                align-items: center; /* Центрируем содержимое формы */
+            }
+            .search-form .form-group {
+                min-width: unset;
+                width: 100%;
+            }
+            .carousel-section {
+                padding: 10px 0;
+            }
+            .carousel-container {
+                padding: 0 10px;
+            }
+            .carousel-item {
+                flex: 0 0 calc(100% - 20px);
+                margin-right: 20px;
+            }
+            .event-grid {
+                grid-template-columns: 1fr;
+            }
+            .filter-buttons {
+                display: flex;
+                flex-direction: column;
+            }
+            .filter-buttons a {
+                margin-bottom: 10px;
+            }
+        }
+         @media (max-width: 480px) { /* Дополнительный медиа-запрос для очень маленьких экранов */
+            .navbar-brand {
+                font-size: 1.5em;
+            }
+            .carousel-item {
+                flex: 0 0 calc(100% - 15px); /* Уменьшаем ширину для меньших экранов */
+                margin-right: 15px;
+            }
+            .event-grid {
+                gap: 15px;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h1>Список мероприятий</h1>
-    <a th:href="@{/events/new}" class="add-new">Добавить новое</a>
+<nav class="navbar">
+    <a href="/events" class="navbar-brand">EventPlatform</a>
+    <div class="navbar-links">
+        <a th:href="@{/events}">Главная</a>
 
-    <div class="filter-form">
-        <form th:action="@{/events}" method="get">
-            <label>Дата:</label>
-            <input type="date" name="date" th:value="${filterDate}" />
+        <button id="toggleSearch" class="search-toggle-btn">Найти мероприятие</button>
 
-            <label>Локация:</label>
-            <input type="text" name="location" th:value="${filterLocation}" placeholder="Введите локацию" />
+        <a th:href="@{/login}" sec:authorize="!isAuthenticated()">Войти</a>
+    </div>
+</nav>
 
-            <button type="submit">Фильтровать</button>
-            <button type="button" class="reset-button" onclick="window.location.href='/events'">Сбросить</button>
-        </form>
+<div class="search-form-container" id="searchFormContainer">
+    <div class="search-form">
+        <h2>Поиск мероприятия</h2> <form th:action="@{/events}" method="get">
+        <div class="form-group">
+            <label for="searchLocation">Поиск по локации:</label>
+            <input type="text" id="searchLocation" name="location" th:value="${param.location}" placeholder="Введите локацию"/>
+        </div>
+        <div class="form-group">
+            <label for="searchDate">Поиск по дате:</label>
+            <input type="date" id="searchDate" name="date" th:value="${param.date}" />
+        </div>
+        <input type="hidden" name="filter" th:value="${param.filter != null ? param.filter : 'upcoming'}"/>
+        <button type="submit">Найти</button>
+    </form>
+    </div>
+</div>
+
+<div class="main-container">
+    <h1>Мероприятия</h1>
+
+    <div class="section carousel-section">
+        <h2>Популярное сейчас</h2>
+        <div th:if="${#lists.isEmpty(upcomingEvents)}" class="no-events">Пока нет популярных мероприятий.</div>
+        <div th:unless="${#lists.isEmpty(upcomingEvents)}" style="position: relative;">
+            <div class="carousel-container carousel-inner">
+                <div class="carousel-item" th:each="event : ${upcomingEvents}">
+                    <img th:if="${event.imageUrl != null and !event.imageUrl.isEmpty()}"
+                         th:src="@{'/Images/' + ${event.imageUrl}}"
+                         alt="Изображение мероприятия"/>
+                    <img th:unless="${event.imageUrl != null and !event.imageUrl.isEmpty()}"
+                         th:src="@{'/Images/placeholder.jpg'}"
+                         alt="Нет изображения"/>
+                    <div class="carousel-item-content">
+                        <h3 th:text="${event.title}">Название мероприятия</h3>
+                        <p th:text="${event.description}">Краткое описание мероприятия.</p>
+                        <a th:href="@{/events/{id}(id=${event.id})}" class="details-btn">Подробнее</a>
+                    </div>
+                </div>
+            </div>
+            <div class="carousel-buttons">
+                <button id="prevBtn" class="carousel-btn">&#10094;</button>
+                <button id="nextBtn" class="carousel-btn">&#10095;</button>
+            </div>
+        </div>
     </div>
 
-    <ul>
-        <li th:each="eventWithStatus : ${eventsWithStatus}" th:class="${eventWithStatus.status}">
-            <div class="event-title" th:text="${eventWithStatus.event.title}">Заголовок</div>
-            <div class="event-status" th:class="${eventWithStatus.status}"
-                 th:text="${eventWithStatus.status == 'past'} ? 'Прошедшее' : 'Предстоящее'"></div>
-            <div class="event-description" th:if="${eventWithStatus.event.description}"
-                 th:text="${eventWithStatus.event.description}">Описание</div>
-            <div class="event-details">
-                <span th:text="${#temporals.format(eventWithStatus.event.date, 'dd.MM.yyyy')}">Дата</span>,
-                <span th:text="${eventWithStatus.event.location}">Локация</span>
+    <div class="filter-buttons">
+        <a th:href="@{/events(filter='upcoming', location=${param.location}, date=${param.date})}" th:classappend="${filter == 'upcoming' ? 'active' : ''}">Предстоящие мероприятия</a>
+        <a th:href="@{/events(filter='past', location=${param.location}, date=${param.date})}" th:classappend="${filter == 'past' ? 'active' : ''}">Прошедшие мероприятия</a>
+    </div>
+
+    <div class="section">
+        <h2 th:text="${filter == 'upcoming' ? 'Предстоящие мероприятия' : 'Прошедшие мероприятия'}"></h2>
+        <div th:if="${#lists.isEmpty(eventsToDisplay)}" class="no-events">
+            <span th:if="${(param.location != null and !param.location.isEmpty()) or (param.date != null and !param.date.isEmpty())}">
+                Не найдено мероприятий по вашему запросу.
+            </span>
+            <span th:unless="${(param.location != null and !param.location.isEmpty()) or (param.date != null and !param.date.isEmpty())}">
+                Пока нет мероприятий.
+            </span>
+        </div>
+        <div th:unless="${#lists.isEmpty(eventsToDisplay)}" class="event-grid">
+            <div class="event-card" th:each="event : ${eventsToDisplay}">
+                <img th:if="${event.imageUrl != null and !event.imageUrl.isEmpty()}"
+                     th:src="@{'/Images/' + ${event.imageUrl}}"
+                     alt="Изображение мероприятия"/>
+                <img th:unless="${event.imageUrl != null and !event.imageUrl.isEmpty()}"
+                     th:src="@{'/Images/placeholder.jpg'}"
+                     alt="Нет изображения"/>
+                <div class="event-card-content">
+                    <h3 th:text="${event.title}">Название мероприятия</h3>
+                    <p th:text="${event.description}">Краткое описание мероприятия.</p>
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span th:text="${event.location}">Место проведения</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span th:text="${event.date}">Дата мероприятия</span>
+                    </div>
+                    <a th:href="@{/events/{id}(id=${event.id})}" class="details-btn">Подробнее</a>
+                </div>
             </div>
-            <div class="event-actions">
-                <a th:href="@{/events/edit/{id}(id=${eventWithStatus.event.id})}" class="edit-link">Редактировать</a>
-                <a th:href="@{/events/delete/{id}(id=${eventWithStatus.event.id})}" class="delete-link"
-                   onclick="return confirm('Вы уверены, что хотите удалить это мероприятие?')">Удалить</a>
-            </div>
-        </li>
-    </ul>
+        </div>
+    </div>
 </div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    const carouselInner = document.querySelector('.carousel-inner');
+    const carouselItems = document.querySelectorAll('.carousel-item');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const searchToggleBtn = document.getElementById('toggleSearch');
+    const searchFormContainer = document.getElementById('searchFormContainer');
+
+    let currentIndex = 0;
+    const itemWidth = 320;
+    const itemMargin = 30;
+    const totalItems = carouselItems.length;
+
+    function updateCarousel() {
+        if (!carouselInner || !carouselItems.length) {
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            return;
+        }
+
+        const containerWidth = carouselInner.parentElement.clientWidth - (2 * 20);
+        const visibleItems = Math.floor(containerWidth / (itemWidth + itemMargin));
+        const maxScrollIndex = Math.max(0, totalItems - visibleItems);
+
+        currentIndex = Math.max(0, Math.min(currentIndex, maxScrollIndex));
+
+        const offset = -currentIndex * (itemWidth + itemMargin);
+        carouselInner.style.transform = `translateX(${offset}px)`;
+
+        if (prevBtn) prevBtn.disabled = currentIndex === 0;
+        if (nextBtn) nextBtn.disabled = currentIndex >= maxScrollIndex;
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            clearInterval(autoSlideInterval);
+            currentIndex--;
+            updateCarousel();
+            startAutoSlide();
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            clearInterval(autoSlideInterval);
+            currentIndex++;
+            updateCarousel();
+            startAutoSlide();
+        });
+    }
+
+    let autoSlideInterval;
+    function startAutoSlide() {
+        clearInterval(autoSlideInterval);
+        if (totalItems > 1) {
+            autoSlideInterval = setInterval(() => {
+                const containerWidth = carouselInner.parentElement.clientWidth - (2 * 20);
+                const visibleItems = Math.floor(containerWidth / (itemWidth + itemMargin));
+                const maxScrollIndex = Math.max(0, totalItems - visibleItems);
+
+                if (currentIndex < maxScrollIndex) {
+                    currentIndex++;
+                } else {
+                    currentIndex = 0;
+                }
+                updateCarousel();
+            }, 5000);
+        }
+    }
+
+    window.addEventListener('load', () => {
+        updateCarousel();
+        startAutoSlide();
+    });
+
+    window.addEventListener('resize', () => {
+        updateCarousel();
+    });
+
+    if (searchToggleBtn && searchFormContainer) {
+        searchToggleBtn.addEventListener('click', () => {
+            searchFormContainer.classList.toggle('active');
+            if (searchFormContainer.classList.contains('active')) {
+                setTimeout(() => {
+                    searchFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        });
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('location') || urlParams.has('date')) {
+        if (searchFormContainer) {
+             searchFormContainer.classList.add('active');
+             setTimeout(() => {
+                 searchFormContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+             }, 100);
+        }
+    }
+
+    /*]]>*/
+</script>
 </body>
 </html>

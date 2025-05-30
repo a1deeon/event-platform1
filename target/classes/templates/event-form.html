@@ -43,15 +43,10 @@
             border-radius: 5px;
             font-size: 14px;
             box-sizing: border-box;
-            transition: border-color 0.3s ease;
-        }
-        input:focus, textarea:focus {
-            border-color: #1a3c34;
-            outline: none;
         }
         textarea {
-            height: 100px;
             resize: vertical;
+            min-height: 80px;
         }
         button {
             padding: 10px 20px;
@@ -94,6 +89,12 @@
         <div class="form-group">
             <label>Дата:</label>
             <input type="date" th:field="*{date}" required />
+        </div>
+
+        <div class="form-group">
+            <label>Имя файла изображения (например, event1.jpg):</label>
+            <input type="text" th:field="*{imageUrl}" placeholder="Введите имя файла изображения" />
+            <small style="color: #666;">Файл должен находиться в папке src/main/resources/static/Images/</small>
         </div>
 
         <button type="submit">Сохранить</button>

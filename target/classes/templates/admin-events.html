@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ru" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель: Мероприятия</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #e0f7fa 0%, #b2ebf2 100%);
+            color: #333;
+        }
+        /* Увеличенная ширина навбара и отступы */
+        .navbar {
+            background-color: #1a3c34;
+            padding: 10px 50px; /* Увеличен padding по горизонтали */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-radius: 0 0 8px 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .navbar-brand {
+            color: white;
+            font-size: 1.8em;
+            font-weight: bold;
+            text-decoration: none;
+        }
+        .navbar-links {
+            display: flex;
+            align-items: center;
+            flex-wrap: nowrap; /* Важно: предотвращает перенос по умолчанию */
+        }
+        .navbar-links a {
+            color: white;
+            text-decoration: none;
+            margin-left: 30px; /* Увеличен отступ между ссылками */
+            font-size: 1.1em;
+            transition: color 0.3s ease;
+        }
+        .navbar-links a:hover {
+            color: #b2ebf2;
+        }
+        .navbar-links form {
+            display: inline-block;
+            margin-left: 30px; /* Отступ для формы кнопки "Выйти" */
+        }
+        .navbar-links button {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+        .navbar-links button:hover {
+            color: #b2ebf2;
+        }
+
+        .container {
+            max-width: 1200px; /* Увеличен максимальный контейнер для содержимого */
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #1a3c34;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+        }
+        h2 {
+            color: #1a3c34;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .action-buttons {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .action-buttons a, .action-buttons button {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 0 10px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        .action-buttons a:hover, .action-buttons button:hover {
+            background-color: #0056b3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #1a3c34;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f8f8;
+        }
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+        .action-btn {
+            display: inline-block;
+            padding: 8px 12px;
+            margin-right: 5px;
+            border-radius: 5px;
+            text-decoration: none;
+            color: white;
+            font-size: 0.9em;
+            transition: background-color 0.3s ease;
+        }
+        .edit-btn {
+            background-color: #28a745;
+        }
+        .edit-btn:hover {
+            background-color: #218838;
+        }
+        .delete-btn {
+            background-color: #dc3545;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+        .no-events {
+            text-align: center;
+            color: #777;
+            font-size: 1.2em;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            margin-top: 20px;
+        }
+
+        /* Адаптивность для админ-панели */
+        @media (max-width: 992px) { /* Изменено с 768px на 992px для более раннего срабатывания */
+            .navbar {
+                padding: 10px 20px; /* Уменьшаем отступы по бокам для средних экранов */
+            }
+            .navbar-links a, .navbar-links form {
+                margin-left: 15px; /* Уменьшаем отступы между ссылками */
+            }
+            .container {
+                max-width: 900px; /* Уменьшаем ширину контейнера */
+            }
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                align-items: flex-start; /* Выравниваем по левому краю при переносе */
+                padding: 10px 15px;
+            }
+            .navbar-links {
+                margin-top: 15px;
+                flex-wrap: wrap; /* Разрешаем перенос ссылок */
+                justify-content: flex-start; /* Выравниваем по левому краю */
+                width: 100%; /* Занимаем всю доступную ширину */
+            }
+            .navbar-links a, .navbar-links form {
+                margin: 5px 10px 5px 0; /* Добавляем отступы сверху/снизу и справа, убираем слева для лучшего переноса */
+                width: auto; /* Позволяет ссылкам занимать нужную ширину */
+            }
+            .navbar-links form button {
+                width: auto; /* Чтобы кнопка не растягивалась на всю ширину, если не нужно */
+            }
+
+            .container {
+                padding: 10px;
+                margin: 10px auto;
+            }
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            thead tr {
+                position: absolute;
+                top: -9999px;
+                left: -9999px;
+            }
+            tr {
+                border: 1px solid #ccc;
+                margin-bottom: 15px;
+                border-radius: 8px;
+            }
+            td {
+                border: none;
+                border-bottom: 1px solid #eee;
+                position: relative;
+                padding-left: 50%;
+                text-align: right;
+            }
+            td:before {
+                position: absolute;
+                top: 6px;
+                left: 6px;
+                width: 45%;
+                padding-right: 10px;
+                white-space: nowrap;
+                text-align: left;
+                font-weight: bold;
+                color: #1a3c34;
+            }
+            td:nth-of-type(1):before { content: "Название"; }
+            td:nth-of-type(2):before { content: "Описание"; }
+            td:nth-of-type(3):before { content: "Локация"; }
+            td:nth-of-type(4):before { content: "Дата"; }
+            td:nth-of-type(5):before { content: "Действия"; }
+            .action-btn {
+                width: calc(50% - 10px);
+                margin-bottom: 5px;
+            }
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            .action-buttons a, .action-buttons button {
+                width: 90%;
+                margin: 5px 0;
+            }
+        }
+
+        @media (max-width: 480px) { /* Дополнительный медиа-запрос для очень маленьких экранов */
+            .navbar-brand {
+                font-size: 1.5em;
+            }
+            .navbar-links a, .navbar-links form {
+                font-size: 1em;
+                margin: 5px 5px 5px 0; /* Еще уменьшаем отступы */
+            }
+            .action-btn {
+                width: 100%;
+                margin-right: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar">
+    <a href="/events" class="navbar-brand">EventPlatform</a>
+    <div class="navbar-links">
+        <a th:href="@{/events}">Главная</a>
+        <a th:href="@{/events/new}">Добавить мероприятие</a>
+        <a th:href="@{/events/admin}">Админ-панель</a>
+        <form th:action="@{/logout}" method="post">
+            <button type="submit">Выйти</button>
+        </form>
+    </div>
+</nav>
+
+<div class="container">
+    <h1>Админ-панель: Управление мероприятиями</h1>
+
+    <div class="action-buttons">
+        <a th:href="@{/events/new}">Добавить новое мероприятие</a>
+    </div>
+
+    <div class="section" th:if="${upcomingEvents != null and not #lists.isEmpty(upcomingEvents)}">
+        <h2>Предстоящие мероприятия</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Локация</th>
+                <th>Дата</th>
+                <th>Действия</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="event : ${upcomingEvents}">
+                <td th:text="${event.title}"></td>
+                <td th:text="${event.description}"></td>
+                <td th:text="${event.location}"></td>
+                <td th:text="${event.date}"></td>
+                <td>
+                    <a th:href="@{/events/edit/{id}(id=${event.id})}" class="action-btn edit-btn">Редактировать</a>
+                    <a th:href="@{/events/delete/{id}(id=${event.id})}" class="action-btn delete-btn" onclick="return confirm('Вы уверены?')">Удалить</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <p th:if="${upcomingEvents == null or #lists.isEmpty(upcomingEvents)}" class="no-events">Нет предстоящих мероприятий.</p>
+
+    <div class="section" th:if="${pastEvents != null and not #lists.isEmpty(pastEvents)}">
+        <h2>Прошедшие мероприятия</h2>
+        <table>
+            <thead>
+            <tr>
+                <th>Название</th>
+                <th>Описание</th>
+                <th>Локация</th>
+                <th>Дата</th>
+                <th>Действия</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="event : ${pastEvents}">
+                <td th:text="${event.title}"></td>
+                <td th:text="${event.description}"></td>
+                <td th:text="${event.location}"></td>
+                <td th:text="${event.date}"></td>
+                <td>
+                    <a th:href="@{/events/edit/{id}(id=${event.id})}" class="action-btn edit-btn">Редактировать</a>
+                    <a th:href="@{/events/delete/{id}(id=${event.id})}" class="action-btn delete-btn" onclick="return confirm('Вы уверены?')">Удалить</a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+    <p th:if="${pastEvents == null or #lists.isEmpty(pastEvents)}" class="no-events">Нет прошедших мероприятий.</p>
+
+</div>
+</body>
+</html>

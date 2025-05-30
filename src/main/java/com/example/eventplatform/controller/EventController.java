@@ -2,11 +2,17 @@ package com.example.eventplatform.controller;
 
 import com.example.eventplatform.model.Event;
 import com.example.eventplatform.repository.EventRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,107 +20,133 @@ import java.util.stream.Collectors;
 @RequestMapping("/events")
 public class EventController {
 
-    private final EventRepository eventRepository;
+    @Autowired
+    private EventRepository eventRepository;
 
-    public EventController(EventRepository eventRepository) {
-        this.eventRepository = eventRepository;
+    @GetMapping("/")
+    public String home() {
+        return "redirect:/events";
     }
 
     @GetMapping
     public String listEvents(
-            @RequestParam(value = "date", required = false) String date,
+            Model model,
+            @RequestParam(value = "filter", required = false, defaultValue = "upcoming") String filter,
             @RequestParam(value = "location", required = false) String location,
-            Model model) {
-        List<Event> events = eventRepository.findAll();
+            @RequestParam(value = "date", required = false) LocalDate date
+    ) {
+        LocalDate currentDate = LocalDate.now();
 
-        // Фильтрация по дате
-        if (date != null && !date.isEmpty()) {
-            LocalDate filterDate = LocalDate.parse(date);
-            events = events.stream()
-                    .filter(event -> event.getDate() != null && event.getDate().equals(filterDate))
-                    .collect(Collectors.toList());
+        List<Event> allEvents;
+
+        // Логика поиска
+        if (location != null && !location.isEmpty() && date != null) {
+            allEvents = eventRepository.findByLocationContainingIgnoreCaseAndDate(location, date);
+        } else if (location != null && !location.isEmpty()) {
+            allEvents = eventRepository.findByLocationContainingIgnoreCase(location);
+        } else if (date != null) {
+            allEvents = eventRepository.findByDate(date);
+        } else {
+            allEvents = eventRepository.findAll();
         }
 
-        // Фильтрация по локации
-        if (location != null && !location.trim().isEmpty()) {
-            String filterLocation = location.trim().toLowerCase();
-            events = events.stream()
-                    .filter(event -> event.getLocation() != null &&
-                            event.getLocation().toLowerCase().contains(filterLocation))
+        List<Event> eventsToDisplay;
+
+        // Фильтрация по "предстоящие" или "прошедшие"
+        if ("past".equals(filter)) {
+            eventsToDisplay = allEvents.stream()
+                    .filter(event -> event.getDate() != null && event.getDate().isBefore(currentDate))
+                    .sorted(Comparator.comparing(Event::getDate).reversed())
                     .collect(Collectors.toList());
+            model.addAttribute("isPastEventsView", true);
+        } else { // "upcoming" или любой другой случай по умолчанию
+            eventsToDisplay = allEvents.stream()
+                    .filter(event -> event.getDate() != null && (event.getDate().isAfter(currentDate) || event.getDate().isEqual(currentDate)))
+                    .sorted(Comparator.comparing(Event::getDate))
+                    .collect(Collectors.toList());
+            model.addAttribute("isPastEventsView", false);
         }
 
-        // Определяем текущую дату (26 мая 2025 года)
-        LocalDate today = LocalDate.of(2025, 5, 26);
+        model.addAttribute("eventsToDisplay", eventsToDisplay);
 
-        // Создаём список мероприятий с их статусом
-        List<EventWithStatus> eventsWithStatus = events.stream()
-                .map(event -> new EventWithStatus(
-                        event,
-                        event.getDate().isBefore(today) ? "past" : "upcoming"
-                ))
+        // Логика для "популярных" мероприятий (карусель)
+        List<Event> popularEventsForCarousel = eventRepository.findByIsPopularOrderByDateAsc(true).stream()
+                .filter(event -> event.getDate() != null && (event.getDate().isAfter(currentDate) || event.getDate().isEqual(currentDate)))
+                .limit(5)
                 .collect(Collectors.toList());
 
-        model.addAttribute("eventsWithStatus", eventsWithStatus);
-        model.addAttribute("filterDate", date);
-        model.addAttribute("filterLocation", location);
+        model.addAttribute("upcomingEvents", popularEventsForCarousel);
+
+        // Передаем текущие параметры поиска в модель, чтобы форма их сохраняла
+        model.addAttribute("location", location);
+        model.addAttribute("date", date);
+        model.addAttribute("filter", filter);
+
         return "events";
     }
 
+    @GetMapping("/admin")
+    public String adminListEvents(Model model) {
+        LocalDate currentDate = LocalDate.now();
+
+        model.addAttribute("upcomingEvents", eventRepository.findAll().stream()
+                .filter(event -> event.getDate() != null && (event.getDate().isAfter(currentDate) || event.getDate().isEqual(currentDate)))
+                .sorted(Comparator.comparing(Event::getDate))
+                .collect(Collectors.toList()));
+        model.addAttribute("pastEvents", eventRepository.findAll().stream()
+                .filter(event -> event.getDate() != null && event.getDate().isBefore(currentDate))
+                .sorted(Comparator.comparing(Event::getDate).reversed())
+                .collect(Collectors.toList()));
+        return "admin-events";
+    }
+
+    @GetMapping("/{id}")
+    public String showEventDetails(@PathVariable("id") Long id, Model model) {
+        Event event = eventRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid event Id:" + id));
+        model.addAttribute("event", event);
+        return "event-details";
+    }
+
     @GetMapping("/new")
-    public String showForm(Model model) {
+    public String showEventForm(Model model) {
         model.addAttribute("event", new Event());
         return "event-form";
     }
 
-    @PostMapping("/new")
-    public String saveEvent(@ModelAttribute Event event) {
-        eventRepository.save(event);
-        return "redirect:/events";
-    }
-
     @GetMapping("/edit/{id}")
-    public String showEditForm(@PathVariable Long id, Model model) {
+    public String showEditForm(@PathVariable("id") Long id, Model model) {
         Event event = eventRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid event Id: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("Invalid event Id:" + id));
         model.addAttribute("event", event);
         return "event-form";
     }
 
+    @PostMapping("/new")
+    public String createEvent(Event event) {
+        long popularEventsCount = eventRepository.countByIsPopular(true);
+        if (popularEventsCount < 5) {
+            event.setPopular(true);
+        } else {
+            event.setPopular(false);
+        }
+        eventRepository.save(event);
+        return "redirect:/events/admin";
+    }
+
     @PostMapping("/edit/{id}")
-    public String updateEvent(@PathVariable Long id, @ModelAttribute Event event) {
+    public String updateEvent(@PathVariable("id") Long id, Event event) {
         Event existingEvent = eventRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Invalid event Id: " + id));
-        existingEvent.setTitle(event.getTitle());
-        existingEvent.setDescription(event.getDescription());
-        existingEvent.setLocation(event.getLocation());
-        existingEvent.setDate(event.getDate());
-        eventRepository.save(existingEvent);
-        return "redirect:/events";
+                .orElseThrow(() -> new IllegalArgumentException("Invalid event Id:" + id));
+        event.setId(id);
+        event.setPopular(existingEvent.isPopular());
+        eventRepository.save(event);
+        return "redirect:/events/admin";
     }
 
     @GetMapping("/delete/{id}")
-    public String deleteEvent(@PathVariable Long id) {
+    public String deleteEvent(@PathVariable("id") Long id) {
         eventRepository.deleteById(id);
-        return "redirect:/events";
-    }
-
-    // Внутренний класс для передачи мероприятия и его статуса
-    public static class EventWithStatus {
-        private final Event event;
-        private final String status;
-
-        public EventWithStatus(Event event, String status) {
-            this.event = event;
-            this.status = status;
-        }
-
-        public Event getEvent() {
-            return event;
-        }
-
-        public String getStatus() {
-            return status;
-        }
+        return "redirect:/events/admin";
     }
 }
